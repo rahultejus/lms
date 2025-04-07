@@ -5,13 +5,18 @@ import User from "../models/User.js"
 
 export const clerkWebhooks=async(req,res)=>{
   try {
+    console.log("Webhook Payload:", req.body)
+    
     const whook=new Webhook(process.env.CLERK_WEBHOOK_SECRET)
     await whook.verify(JSON.stringify(req.body),{
       "svix-id":req.headers["svix-id"],
       "svix-timestamp":req.headers["svix-timestamp"],
       "svix-signature":req.headers["svix-signature"],
     })
+
+    
     const {data,type}=req.body;
+    console.log("PROCESSED DATA:", data);
 
    switch (type) {
     case 'user.created':{
@@ -21,9 +26,16 @@ export const clerkWebhooks=async(req,res)=>{
         name:data.first_name + '' +data.last_name,
         imageUrl:data.imageUrl,
       }
-      await User.create(userData)
-      res.json({})
+      console.log("ATTEMPTING TO CREATE USER:", userData);
+      const user = await User.create(userData).catch(err => {
+        console.error("USER CREATION ERROR:", err); // Explicit error log
+        throw err;
+      });
+      console.log("USER CREATED IN DB:", user); // Confirm success
       break;
+      // await User.create(userData)
+      // res.json({})
+      // break;
     }
 
     case 'user.updated':{
